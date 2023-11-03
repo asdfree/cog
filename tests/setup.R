@@ -107,10 +107,10 @@ with( double_df , tapply( full_time_employees , grepl( "Total" , government_func
 with( double_df , tapply( part_time_payroll , grepl( "Total" , government_function ) , sum ) )
 
 # keep one record per government function (multiple records per agency):
-cog_df <- subset( double_df , grepl( "Total" , government_function ) )
+cog_df <- subset( double_df , !grepl( "Total" , government_function ) )
 
 # keep one record per government agency:
-# cog_df <- subset( double_df , !grepl( "Total" , government_function ) )
+# cog_df <- subset( double_df , grepl( "Total" , government_function ) )
 # cog_fn <- file.path( path.expand( "~" ) , "COG" , "this_file.rds" )
 # saveRDS( cog_df , file = cog_fn , compress = FALSE )
 # cog_df <- readRDS( cog_fn )
