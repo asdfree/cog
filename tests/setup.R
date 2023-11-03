@@ -38,14 +38,24 @@ column_intersect <- Reduce( intersect , lapply( gus_df_list , names ) )
 column_union <- unique( unlist( lapply( gus_df_list , names ) ) )
 
 # these columns will be discarded by stacking
-unique( unlist( lapply( lapply( gus_df_list , names ) , function( w ) column_union[ !column_union %in% w ] ) ) )
+unique(
+	unlist(
+		lapply(
+			lapply( gus_df_list , names ) , 
+			function( w ) column_union[ !column_union %in% w ]
+		)
+	)
+)
 
 # stack all excel sheets, keeping only the columns that all tables have in common
-gus_df <-
-	Reduce( rbind , lapply( gus_df_list , function( w ) w[ column_intersect ] ) )
+gus_df <- Reduce( rbind , lapply( gus_df_list , function( w ) w[ column_intersect ] ) )
 tf_apes <- tempfile()
 
-apes_url <- "https://www2.census.gov/programs-surveys/apes/datasets/2022/2022%20COG-E%20Individual%20Unit%20Files.zip"
+apes_url <-
+	paste0(
+		"https://www2.census.gov/programs-surveys/apes/datasets/" ,
+		"2022/2022%20COG-E%20Individual%20Unit%20Files.zip"
+	)
 
 download.file( apes_url , tf_apes , mode = 'wb' )
 
@@ -88,6 +98,9 @@ cog_df <-
 	)
 
 stopifnot( nrow( cog_df ) == nrow( apes_df ) )
+
+# replace dots with underscores
+names( cog_df ) <- gsub( "\\." , "_" , names( cog_df ) )
 tapply( cog_df$full.time.employees , grepl('Total',cog_df$government.function),sum)
 # FALSE TRUE 
 # 14944806 14944806 
@@ -98,107 +111,99 @@ cog_df <-
 	transform( 
 		cog_df , 
 		
-		cbsa_indicator_code = 
-			factor( 
-				as.numeric( f1406720 ) , 
-				levels = 0:2 ,
-				labels = c( "not metro" , "metro" , "micro" ) 
-			) ,
-			
-		mhi_2020 = f1322620 ,
+		one = 1 ,
 		
-		whole_county_hpsa_2022 = as.numeric( f0978722 ) == 1 ,
+		total_payroll = full_time_payroll + part_time_payroll ,
 		
-		census_region = 
-			factor( 
-				as.numeric( f04439 ) , 
-				levels = 1:4 ,
-				labels = c( "northeast" , "midwest" , "south" , "west" ) 
-			)
+		total_employees = full_time_employees + part_time_employees ,
 
+		any_full_time_employees = full_time_employees > 0
+		
 	)
-	
 nrow( cog_df )
 
-table( cog_df[ , "cbsa_indicator_code" ] , useNA = "always" )
-mean( cog_df[ , "mhi_2020" ] , na.rm = TRUE )
+table( cog_df[ , "type_of_government" ] , useNA = "always" )
+mean( cog_df[ , "full_time_employees" ] )
 
 tapply(
-	cog_df[ , "mhi_2020" ] ,
-	cog_df[ , "cbsa_indicator_code" ] ,
-	mean ,
-	na.rm = TRUE 
+	cog_df[ , "full_time_employees" ] ,
+	cog_df[ , "type_of_government" ] ,
+	mean 
 )
 prop.table( table( cog_df[ , "census_region" ] ) )
 
 prop.table(
-	table( cog_df[ , c( "census_region" , "cbsa_indicator_code" ) ] ) ,
+	table( cog_df[ , c( "census_region" , "type_of_government" ) ] ) ,
 	margin = 2
 )
-sum( cog_df[ , "mhi_2020" ] , na.rm = TRUE )
+sum( cog_df[ , "full_time_employees" ] )
 
 tapply(
-	cog_df[ , "mhi_2020" ] ,
-	cog_df[ , "cbsa_indicator_code" ] ,
-	sum ,
-	na.rm = TRUE 
+	cog_df[ , "full_time_employees" ] ,
+	cog_df[ , "type_of_government" ] ,
+	sum 
 )
-quantile( cog_df[ , "mhi_2020" ] , 0.5 , na.rm = TRUE )
+quantile( cog_df[ , "full_time_employees" ] , 0.5 )
 
 tapply(
-	cog_df[ , "mhi_2020" ] ,
-	cog_df[ , "cbsa_indicator_code" ] ,
+	cog_df[ , "full_time_employees" ] ,
+	cog_df[ , "type_of_government" ] ,
 	quantile ,
-	0.5 ,
-	na.rm = TRUE 
+	0.5 
 )
-sub_cog_df <- subset( cog_df , f12424 == "CA" )
-mean( sub_cog_df[ , "mhi_2020" ] , na.rm = TRUE )
-var( cog_df[ , "mhi_2020" ] , na.rm = TRUE )
+sub_cog_df <- subset( cog_df , grepl( 'Education' , government_function ) )
+mean( sub_cog_df[ , "full_time_employees" ] )
+var( cog_df[ , "full_time_employees" ] )
 
 tapply(
-	cog_df[ , "mhi_2020" ] ,
-	cog_df[ , "cbsa_indicator_code" ] ,
-	var ,
-	na.rm = TRUE 
+	cog_df[ , "full_time_employees" ] ,
+	cog_df[ , "type_of_government" ] ,
+	var 
 )
-t.test( mhi_2020 ~ whole_county_hpsa_2022 , cog_df )
-this_table <- table( cog_df[ , c( "whole_county_hpsa_2022" , "census_region" ) ] )
+t.test( full_time_employees ~ any_full_time_employees , cog_df )
+this_table <- table( cog_df[ , c( "any_full_time_employees" , "census_region" ) ] )
 
 chisq.test( this_table )
 glm_result <- 
 	glm( 
-		mhi_2020 ~ whole_county_hpsa_2022 + census_region , 
+		full_time_employees ~ any_full_time_employees + census_region , 
 		data = cog_df
 	)
 
 summary( glm_result )
-stopifnot( nrow( cog_df ) == 3232 )
+financial_admin_df <- subset( cog_df , government_function == 'Financial Administration' )
+
+stopifnot( sum( financial_admin_df[ , 'full_time_employees' ] ) == 404228 )
+stopifnot( sum( financial_admin_df[ , 'full_time_payroll' ] ) == 2426969677 )
+stopifnot( sum( financial_admin_df[ , 'part_time_employees' ] ) == 52228 )
+stopifnot( sum( financial_admin_df[ , 'part_time_payroll' ] ) == 80116458 )
+stopifnot( sum( financial_admin_df[ , 'total_employees' ] ) == 456456 )
+stopifnot( sum( financial_admin_df[ , 'total_payroll' ] ) == 2507086135 )
 library(dplyr)
 cog_tbl <- as_tibble( cog_df )
 cog_tbl %>%
-	summarize( mean = mean( mhi_2020 , na.rm = TRUE ) )
+	summarize( mean = mean( full_time_employees ) )
 
 cog_tbl %>%
-	group_by( cbsa_indicator_code ) %>%
-	summarize( mean = mean( mhi_2020 , na.rm = TRUE ) )
+	group_by( type_of_government ) %>%
+	summarize( mean = mean( full_time_employees ) )
 library(data.table)
 cog_dt <- data.table( cog_df )
-cog_dt[ , mean( mhi_2020 , na.rm = TRUE ) ]
+cog_dt[ , mean( full_time_employees ) ]
 
-cog_dt[ , mean( mhi_2020 , na.rm = TRUE ) , by = cbsa_indicator_code ]
+cog_dt[ , mean( full_time_employees ) , by = type_of_government ]
 library(duckdb)
 con <- dbConnect( duckdb::duckdb() , dbdir = 'my-db.duckdb' )
 dbWriteTable( con , 'cog' , cog_df )
-dbGetQuery( con , 'SELECT AVG( mhi_2020 ) FROM cog' )
+dbGetQuery( con , 'SELECT AVG( full_time_employees ) FROM cog' )
 
 dbGetQuery(
 	con ,
 	'SELECT
-		cbsa_indicator_code ,
-		AVG( mhi_2020 )
+		type_of_government ,
+		AVG( full_time_employees )
 	FROM
 		cog
 	GROUP BY
-		cbsa_indicator_code'
+		type_of_government'
 )
