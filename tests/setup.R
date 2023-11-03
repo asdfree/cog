@@ -88,7 +88,7 @@ table(
 # rename the state column in `gus_df` to state abbreviation
 names( gus_df )[ names( gus_df ) == 'state' ] <- 'stateab'
 
-cog_df <-
+double_df <-
 	merge(
 		apes_df ,
 		gus_df ,
@@ -97,13 +97,20 @@ cog_df <-
 		all.x = TRUE
 	)
 
-stopifnot( nrow( cog_df ) == nrow( apes_df ) )
+stopifnot( nrow( double_df ) == nrow( apes_df ) )
 
 # replace dots with underscores
-names( cog_df ) <- gsub( "\\." , "_" , names( cog_df ) )
-tapply( cog_df$full_time_employees , grepl('Total',cog_df$government_function),sum)
-# FALSE TRUE 
-# 14944806 14944806 
+names( double_df ) <- gsub( "\\." , "_" , names( double_df ) )
+# `Total - All Government Employment Functions` records sum to the same as all other records:
+with( double_df , tapply( full_time_employees , grepl( "Total" , government_function ) , sum ) )
+
+with( double_df , tapply( part_time_payroll , grepl( "Total" , government_function ) , sum ) )
+
+# keep one record per government function (multiple records per agency):
+cog_df <- subset( double_df , grepl( "Total" , government_function ) )
+
+# keep one record per government agency:
+# cog_df <- subset( double_df , !grepl( "Total" , government_function ) )
 # cog_fn <- file.path( path.expand( "~" ) , "COG" , "this_file.rds" )
 # saveRDS( cog_df , file = cog_fn , compress = FALSE )
 # cog_df <- readRDS( cog_fn )
@@ -173,11 +180,6 @@ summary( glm_result )
 financial_admin_df <- subset( cog_df , government_function == 'Financial Administration' )
 
 stopifnot( sum( financial_admin_df[ , 'full_time_employees' ] ) == 404228 )
-stopifnot( sum( financial_admin_df[ , 'full_time_payroll' ] ) == 2426969677 )
-stopifnot( sum( financial_admin_df[ , 'part_time_employees' ] ) == 52228 )
-stopifnot( sum( financial_admin_df[ , 'part_time_payroll' ] ) == 80116458 )
-stopifnot( sum( financial_admin_df[ , 'total_employees' ] ) == 456456 )
-stopifnot( sum( financial_admin_df[ , 'total_payroll' ] ) == 2507086135 )
 library(dplyr)
 cog_tbl <- as_tibble( cog_df )
 cog_tbl %>%
