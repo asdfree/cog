@@ -1,6 +1,6 @@
-# city hall marriage
-# schools cops with fire water
-# fed mail invite lost
+# courthouse steps wedding
+# schools police fire water
+# no fed mail invite
 library(readxl)
 
 tf_gus <- tempfile()
@@ -31,13 +31,13 @@ gus_df_list <-
 # add the excel tab source to each data.frame
 for( i in seq( xlsx_sheets ) ) gus_df_list[[ i ]][ , 'source_tab' ] <- xlsx_sheets[ i ]
 
-# columns in all tables
+# determine which columns are in all tables
 column_intersect <- Reduce( intersect , lapply( gus_df_list , names ) )
 
-# columns in some but not all tables
+# determine which columns are in some but not all tables
 column_union <- unique( unlist( lapply( gus_df_list , names ) ) )
 
-# these columns will be discarded by stacking
+# these columns will be discarded by stacking:
 unique(
 	unlist(
 		lapply(
@@ -68,21 +68,21 @@ apes_tbl <- read_excel( xlsx_apes_fn )
 apes_df <- data.frame( apes_tbl )
 
 names( apes_df ) <- tolower( names( apes_df ) )
-# all DEP School Districts and a third of Special Districts are not in the apes_df
+# all DEP School Districts and a third of Special Districts are not in the `apes_df`
 table(
 	gus_df[ , 'census_id_gidid' ] %in% apes_df[ , 'individual.unit.id' ] ,
 	gus_df[ , 'source_tab' ] ,
 	useNA = 'always'
 )
 
-# state governments are not in the gus_df
+# state governments are not in the `gus_df`
 table(
 	apes_df[ , 'individual.unit.id' ] %in% gus_df[ , 'census_id_gidid' ] ,
 	apes_df[ , 'type.of.government' ] ,
 	useNA = 'always'
 )
 
-# check for overlapping field names
+# check for overlapping field names:
 ( overlapping_names <- intersect( names( apes_df ) , names( gus_df ) ) )
 
 # rename the state column in `gus_df` to state abbreviation
@@ -101,7 +101,7 @@ stopifnot( nrow( cog_df ) == nrow( apes_df ) )
 
 # replace dots with underscores
 names( cog_df ) <- gsub( "\\." , "_" , names( cog_df ) )
-tapply( cog_df$full.time.employees , grepl('Total',cog_df$government.function),sum)
+tapply( cog_df$full_time_employees , grepl('Total',cog_df$government_function),sum)
 # FALSE TRUE 
 # 14944806 14944806 
 # cog_fn <- file.path( path.expand( "~" ) , "COG" , "this_file.rds" )
@@ -118,7 +118,6 @@ cog_df <-
 		total_employees = full_time_employees + part_time_employees ,
 
 		any_full_time_employees = full_time_employees > 0
-		
 	)
 nrow( cog_df )
 
