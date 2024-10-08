@@ -179,7 +179,7 @@ glm_result <-
 summary( glm_result )
 financial_admin_df <- subset( cog_df , government_function == 'Financial Administration' )
 
-stopifnot( sum( financial_admin_df[ , 'full_time_employees' ] ) == 401394 )
+stopifnot( sum( financial_admin_df[ , 'full_time_employees' ] ) == 404228 )
 library(dplyr)
 cog_tbl <- as_tibble( cog_df )
 cog_tbl %>%
